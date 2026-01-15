@@ -2559,7 +2559,7 @@ def show_prediction_page():
     """Prediction page for new instances"""
     st.markdown("## <i class='bi bi-magic'></i> Make Predictions", unsafe_allow_html=True)
     
-    if not st.session_state.trained:
+    if 'trained' not in st.session_state or not st.session_state.trained:
         st.markdown("<div style='padding: 1rem; border-radius: 0.5rem; background-color: #fff3cd; border-left: 4px solid #856404; color: #856404;'><i class='bi bi-exclamation-triangle' style='color: #F39C12;'></i> Please train a model first.</div>", unsafe_allow_html=True)
         return
     
@@ -2577,48 +2577,118 @@ def show_prediction_page():
             age = st.number_input("Age", min_value=20, max_value=100, value=50)
             sex = st.selectbox("Sex", [0, 1], format_func=lambda x: "Female" if x == 0 else "Male")
             resting_bp = st.number_input("Resting BP", min_value=80, max_value=200, value=120)
+            cholesterol = st.number_input("Cholesterol", min_value=0, max_value=600, value=200)
         
         with col2:
             max_hr = st.number_input("Max Heart Rate", min_value=60, max_value=220, value=150)
             oldpeak = st.number_input("Oldpeak", min_value=0.0, max_value=6.0, value=1.0, step=0.1)
             exercise_angina = st.selectbox("Exercise Angina", [0, 1], 
                                           format_func=lambda x: "No" if x == 0 else "Yes")
+            fasting_bs = st.selectbox("Fasting Blood Sugar > 120 mg/dl", [0, 1], 
+                                     format_func=lambda x: "No" if x == 0 else "Yes")
         
         with col3:
-            chest_pain = st.selectbox("Chest Pain Type", [0, 2, 3])
-            resting_ecg = st.selectbox("Resting ECG", [0, 2])
-            st_slope = st.selectbox("ST Slope", [1, 2])
+            chest_pain = st.selectbox("Chest Pain Type", [0, 2, 3], help="0: Asymptomatic, 2: Atypical Angina, 3: Non-Anginal Pain")
+            resting_ecg = st.selectbox("Resting ECG", [0, 2], help="0: Normal, 2: LV Hypertrophy")
+            st_slope = st.selectbox("ST Slope", [1, 2], help="1: Flat, 2: Up")
         
         submit = st.form_submit_button("🔮 Predict", type="primary", use_container_width=True)
         
         if submit:
             make_prediction(age, sex, resting_bp, max_hr, oldpeak, exercise_angina,
-                          chest_pain, resting_ecg, st_slope)
+                          chest_pain, resting_ecg, st_slope, cholesterol, fasting_bs)
 
 
 def make_prediction(age, sex, resting_bp, max_hr, oldpeak, exercise_angina,
-                    chest_pain, resting_ecg, st_slope):
-    """Make prediction for new instance"""
+                    chest_pain, resting_ecg, st_slope, cholesterol, fasting_bs):
+    """Make prediction for new instance using the trained model"""
+    from sklearn.preprocessing import StandardScaler
+    
     try:
-        # Prepare feature vector (need to match training features)
-        # This is a simplified version - you'll need to match exact feature engineering
+        results_all = st.session_state.training_results
         
-        results = st.session_state.training_results
-        scaler = results['X_train_scaled']  # This won't work directly, need to save scaler
-        
-        # Get best model from appropriate stage
-        if 'fe_xai' in results and results['fe_xai']:
-            model = results['fe_xai']['best_model']
-        elif 'fe_only' in results:
-            model = results['fe_only']['best_model']
+        # 1. Get appropriate results and model
+        if 'fe_xai' in results_all and results_all['fe_xai']:
+            active_results = results_all['fe_xai']
+        elif 'fe_only' in results_all and results_all['fe_only']:
+            active_results = results_all['fe_only']
+        elif 'no_fe' in results_all and results_all['no_fe']:
+             active_results = results_all['no_fe']
         else:
-            model = results['best_model']
+             st.error("Model data not found. Please train model first.")
+             return
+             
+        model = active_results['best_model']
+            
+        # 2. Prepare raw input data
+        # Mapping column names to match DataProcessor logic
+        input_data = {
+            'age': [age],
+            'sex': [sex],
+            'resting bp s': [resting_bp],
+            'cholesterol': [cholesterol],
+            'fasting blood sugar': [fasting_bs],
+            'max heart rate': [max_hr],
+            'exercise angina': [exercise_angina],
+            'oldpeak': [oldpeak],
+            'chest pain type': [chest_pain],
+            'resting ecg': [resting_ecg],
+            'ST slope': [st_slope]
+        }
+        df_input = pd.DataFrame(input_data)
         
-        st.markdown("<div style='padding: 1rem; border-radius: 0.5rem; background-color: #d1ecf1; border-left: 4px solid #0c5460; color: #0c5460;'><i class='bi bi-exclamation-triangle' style='color: #F39C12;'></i> Prediction functionality requires proper feature engineering pipeline. This is a placeholder.</div>", unsafe_allow_html=True)
+        # 3. Apply transformations (must match training pipeline)
+        if cholesterol > 0:
+            df_input['cholesterol'] = np.log1p(df_input['cholesterol'])
+        if oldpeak >= 0:
+            df_input['oldpeak'] = np.log1p(df_input['oldpeak'])
+            
+        # 4. Feature Engineering (One-Hot Encoding)
+        one_hot_cols = ['chest pain type', 'resting ecg', 'ST slope']
+        df_encoded = pd.get_dummies(df_input, columns=one_hot_cols, dtype=int)
         
-        # For now, show a demo prediction
-        demo_pred = np.random.choice([0, 1])
-        demo_proba = [0.35, 0.65] if demo_pred == 1 else [0.72, 0.28]
+        # 5. Align with training features
+        train_columns = active_results['X_train'].columns.tolist()
+        
+        # Add missing columns (fill with 0)
+        for col in train_columns:
+            if col not in df_encoded.columns:
+                df_encoded[col] = 0
+                
+        # Select and reorder to match training data exactly
+        df_encoded = df_encoded[train_columns]
+        
+        # 6. Scaling
+        # Fit a new scaler on the original training data to ensure consistent scaling
+        scaler = StandardScaler()
+        scaler.fit(active_results['X_train'])
+        
+        X_new_scaled = scaler.transform(df_encoded)
+        
+        # 7. Apply Interactions if needed (for XAI-improved models)
+        if active_results.get('improved_selected', False) and 'new_features' in active_results:
+            # We need to work with DataFrame to easily select interaction columns
+            X_scaled_df = pd.DataFrame(X_new_scaled, columns=train_columns)
+            
+            for feature in active_results['new_features']:
+                # Feature name is like "col1_x_col2"
+                parts = feature.split('_x_')
+                if len(parts) == 2:
+                    f1, f2 = parts
+                    if f1 in X_scaled_df.columns and f2 in X_scaled_df.columns:
+                        X_scaled_df[feature] = X_scaled_df[f1] * X_scaled_df[f2]
+            
+            # Convert back to numpy array for prediction
+            X_final = X_scaled_df.values
+        else:
+            X_final = X_new_scaled
+        
+        # 8. Prediction
+        prediction = model.predict(X_final)[0]
+        prediction_proba = model.predict_proba(X_final)[0]
+        
+        demo_pred = prediction
+        demo_proba = prediction_proba
         
         st.divider()
         st.subheader("Prediction Result")
