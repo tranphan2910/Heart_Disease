@@ -329,3 +329,62 @@ class ModelImprover:
         print("="*60)
         
         return results
+
+
+class InteractionFeatureEngine:
+    """
+    Handles Feature Engineering (Interactions) effectively for pipeline consistency.
+    Stores the logic to reproduce features during inference.
+    """
+    
+    def __init__(self, top_features_count=5):
+        self.top_features_count = top_features_count
+        self.interactions = [] # List of tuples (feat1, feat2)
+        self.new_feature_names = []
+        self.original_feature_names = []
+        
+    def fit(self, X_df, xai_results):
+        """
+        Identify top features and determine interactions to create
+        """
+        self.original_feature_names = X_df.columns.tolist()
+        
+        # Extract top features from XAI
+        perm_importance = xai_results['permutation_importance']
+        top_features = perm_importance.nlargest(self.top_features_count, 'Importance')['Feature'].tolist()
+        
+        # Generate combinations
+        from itertools import combinations
+        self.interactions = list(combinations(top_features, 2))[:5]
+        
+        self.new_feature_names = []
+        for feat1, feat2 in self.interactions:
+            self.new_feature_names.append(f"{feat1}_x_{feat2}")
+            
+        print(f"InteractionFeatureEngine fitted. Created {len(self.interactions)} interactions.")
+        return self
+
+    def transform(self, X_df):
+        """
+        Apply the learned interactions to new data
+        """
+        X_new = X_df.copy()
+        
+        # Verify columns exist
+        missing_cols = [col for col in self.original_feature_names if col not in X_new.columns]
+        if missing_cols:
+             # Try to handle if X_new is just numpy array converted to DF without correct columns
+             if len(X_new.columns) == len(self.original_feature_names):
+                 X_new.columns = self.original_feature_names
+        
+        for (feat1, feat2), new_name in zip(self.interactions, self.new_feature_names):
+            if feat1 in X_new.columns and feat2 in X_new.columns:
+                X_new[new_name] = X_new[feat1] * X_new[feat2]
+            else:
+                # Fallback if features missing
+                X_new[new_name] = 0
+                
+        return X_new
+    
+    def get_feature_names(self):
+        return self.original_feature_names + self.new_feature_names

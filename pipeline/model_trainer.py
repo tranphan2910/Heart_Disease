@@ -10,7 +10,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier
 from .xai_explainer import XAIExplainer
-from .model_improver import ModelImprover
+from .model_improver import ModelImprover, InteractionFeatureEngine
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -327,19 +327,17 @@ class ModelTrainer:
                 top_features = perm_importance.nlargest(5, 'Importance')['Feature'].tolist()
                 print(f"   Top features for interactions: {top_features[:3]}...")
                 
-                # Create interaction features
+                # Create interaction features using InteractionFeatureEngine
                 X_train_df = pd.DataFrame(X_train_scaled, columns=X.columns)
                 X_test_df = pd.DataFrame(X_test_scaled, columns=X.columns)
                 
-                interactions = list(combinations(top_features, 2))[:5]
-                new_features = []
+                fe_engine = InteractionFeatureEngine()
+                fe_engine.fit(X_train_df, xai_results)
                 
-                for feat1, feat2 in interactions:
-                    if feat1 in X_train_df.columns and feat2 in X_train_df.columns:
-                        new_col = f"{feat1}_x_{feat2}"
-                        X_train_df[new_col] = X_train_df[feat1] * X_train_df[feat2]
-                        X_test_df[new_col] = X_test_df[feat1] * X_test_df[feat2]
-                        new_features.append(new_col)
+                X_train_df = fe_engine.transform(X_train_df)
+                X_test_df = fe_engine.transform(X_test_df)
+                
+                new_features = fe_engine.new_feature_names
                 
                 print(f"    Created {len(new_features)} interaction features")
                 print(f"   Features: {len(X.columns)} → {len(X_train_df.columns)}")
@@ -446,6 +444,18 @@ class ModelTrainer:
                     results['best_model_name'] = best_improved_name
                     results['best_metrics']['Accuracy'] = best_improved_acc
                     results['improved_selected'] = True
+                    
+                    # CRITICAL FIX: Ensure pipeline consistency
+                    # Store transformer and updated data so API can use them
+                    results['feature_transformer'] = fe_engine
+                    results['X_train_scaled'] = X_train_improved
+                    results['X_test_scaled'] = X_test_improved
+                    # Update feature names for XAI
+                    if hasattr(fe_engine, 'get_feature_names'):
+                         results['feature_names'] = fe_engine.get_feature_names()
+                    else:
+                         # Fallback
+                         results['feature_names'] = X.columns.tolist() + new_features
                 else:
                     print(f"\n WINNER: Baseline Model")
                     print(f"   Selected: {baseline_best_name}")
