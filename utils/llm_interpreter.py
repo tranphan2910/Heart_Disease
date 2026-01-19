@@ -67,6 +67,12 @@ class LLMInterpreter:
             print("Warning: GROQ_API_KEY not set. LLM interpretation will not work.")
             print("Please set it in .env file or pass it as parameter.")
     
+    def call_llm(self, prompt: str, system_prompt: str = None) -> str:
+        """
+        Public wrapper for _call_groq_api to allow direct prompts
+        """
+        return self._call_groq_api(prompt, system_prompt)
+
     def _call_groq_api(self, prompt: str, system_prompt: str = None) -> str:
         """
         Call Groq API với retry logic và rate limiting để tránh lỗi 429
