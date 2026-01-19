@@ -10,7 +10,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier
 from .xai_explainer import XAIExplainer
-from .model_improver import ModelImprover
+from .model_improver import ModelImprover, InteractionFeatureEngine
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -261,7 +261,6 @@ class ModelTrainer:
         print("\n[1/3] Splitting and scaling data...")
         X_train, X_test, y_train, y_test, X_train_scaled, X_test_scaled = self.split_and_scale(X, y)
         print(f"  Train shape: {X_train.shape}, Test shape: {X_test.shape}")
-        
 
         # ====== PATIENT LOCATOR (TEST → ORIGINAL DATASET) ======
         n_show = min(7, len(X_test))
@@ -278,11 +277,6 @@ class ModelTrainer:
         print(patient_locator.to_string(index=False))
         print("=" * 54 + "\n")
         # =======================================================
-
-
-        # 2. Baseline training...
-        print("\n[2/3] Training baseline models...")
-        baseline_results = self.train_baseline_models(X_train_scaled, y_train, X_test_scaled, y_test)
 
         
         # 2. Baseline training (optional - quick check)
@@ -350,21 +344,28 @@ class ModelTrainer:
                 top_features = perm_importance.nlargest(5, 'Importance')['Feature'].tolist()
                 print(f"   Top features for interactions: {top_features[:3]}...")
                 
-                # Create interaction features
+                # Create interaction features using InteractionFeatureEngine
                 X_train_df = pd.DataFrame(X_train_scaled, columns=X.columns)
                 X_test_df = pd.DataFrame(X_test_scaled, columns=X.columns)
                 
-                interactions = list(combinations(top_features, 2))[:5]
-                new_features = []
+                fe_engine = InteractionFeatureEngine()
+                fe_engine.fit(X_train_df, xai_results)
                 
-                for feat1, feat2 in interactions:
-                    if feat1 in X_train_df.columns and feat2 in X_train_df.columns:
-                        new_col = f"{feat1}_x_{feat2}"
-                        X_train_df[new_col] = X_train_df[feat1] * X_train_df[feat2]
-                        X_test_df[new_col] = X_test_df[feat1] * X_test_df[feat2]
-                        new_features.append(new_col)
+                X_train_df = fe_engine.transform(X_train_df)
+                X_test_df = fe_engine.transform(X_test_df)
+                
+                new_features = fe_engine.new_feature_names
                 
                 print(f"    Created {len(new_features)} interaction features")
+                # Print interaction features explanation to Console as requested by user
+                print("    > Top features from Origin Model used to create interactions:")
+                for i, feat in enumerate(top_features, 1):
+                    print(f"      {i}. {feat}")
+                
+                print("    > Interaction Features Details:")
+                for i, feat in enumerate(new_features, 1):
+                    print(f"      {i}. {feat}")
+                    
                 print(f"   Features: {len(X.columns)} → {len(X_train_df.columns)}")
                 
                 # Train improved models with FE
@@ -469,6 +470,60 @@ class ModelTrainer:
                     results['best_model_name'] = best_improved_name
                     results['best_metrics']['Accuracy'] = best_improved_acc
                     results['improved_selected'] = True
+                    
+                    # CRITICAL FIX: Ensure pipeline consistency
+                    # Store transformer and updated data so API can use them
+                    results['feature_transformer'] = fe_engine
+                    results['X_train_scaled'] = X_train_improved
+                    results['X_test_scaled'] = X_test_improved
+                    # Update feature names for XAI
+                    if hasattr(fe_engine, 'get_feature_names'):
+                         results['feature_names'] = fe_engine.get_feature_names()
+                    else:
+                         # Fallback
+                         results['feature_names'] = X.columns.tolist() + new_features
+                         
+                    # RE-RUN XAI FOR THE FINAL IMPROVED MODEL
+                    # This ensures Web UI shows SHAP/PI for the model actually being used
+                    print("\n[Step 4/3] Updating XAI Analysis for Final Improved Model...")
+                    try:
+                        final_xai = XAIExplainer(
+                            model=best_improved_model,
+                            X_train=X_train_improved,
+                            X_test=X_test_improved,
+                            y_train=y_train,
+                            y_test=y_test,
+                            X_train_scaled=X_train_improved, # Already scaled/transformed
+                            X_test_scaled=X_test_improved,
+                            feature_names=results['feature_names']
+                        )
+                        # We only need Global explanations updated in results
+                        final_xai.calculate_shap()
+                        final_shap_imp = final_xai.get_shap_importance()
+                        final_shap_summary = final_xai.get_shap_summary_data()
+                        
+                        # Permutation importance for new model
+                        from sklearn.inspection import permutation_importance
+                        print("    Calculating Permutation Importance for Improved Model...")
+                        perm_results = permutation_importance(
+                            best_improved_model, X_test_improved, y_test, 
+                            n_repeats=10, random_state=42, n_jobs=-1
+                        )
+                        final_perm_imp = pd.DataFrame({
+                            'Feature': results['feature_names'],
+                            'Importance': perm_results.importances_mean,
+                            'Std': perm_results.importances_std
+                        }).sort_values('Importance', ascending=False)
+                        
+                        # Update results['xai_results'] with FINAL model insights
+                        results['xai_results']['shap_importance'] = final_shap_imp
+                        results['xai_results']['shap_summary_data'] = final_shap_summary
+                        results['xai_results']['permutation_importance'] = final_perm_imp
+                        print("    XAI Results Updated to reflect Final Model.")
+                        
+                    except Exception as e:
+                        print(f"    Warning: Could not update XAI for improved model: {e}")
+                        
                 else:
                     print(f"\n WINNER: Baseline Model")
                     print(f"   Selected: {baseline_best_name}")

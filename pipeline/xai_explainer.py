@@ -103,7 +103,7 @@ class XAIExplainer:
         self.lime_explainer = lime.lime_tabular.LimeTabularExplainer(
             training_data=self.X_train.values,
             feature_names=self.feature_names,
-            class_names=['No Disease', 'Disease'],
+            class_names=['Disease','No Disease'],
             mode='classification'
         )
         

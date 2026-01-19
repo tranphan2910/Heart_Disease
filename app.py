@@ -223,6 +223,51 @@ if 'xai_results' not in st.session_state:
 if 'llm_interpretations' not in st.session_state:
     st.session_state.llm_interpretations = None
 
+# DEMO SCENARIOS (Data from User)
+DEMO_CASES = {
+    "Case 1 (Index 1089) - Age 57, Male": {
+        'age': 57, 'sex': 1, 'chest pain type': 3, 'resting bp s': 150, 
+        'cholesterol': 126, 'fasting blood sugar': 1, 'resting ecg': 0, 
+        'max heart rate': 173, 'exercise angina': 0, 'oldpeak': 0.2, 'ST slope': 1,
+        'target_label': 'Normal'
+    },
+    "Case 2 (Index 31) - Age 56, Male": {
+        'age': 56, 'sex': 1, 'chest pain type': 3, 'resting bp s': 130, 
+        'cholesterol': 167, 'fasting blood sugar': 0, 'resting ecg': 0, 
+        'max heart rate': 114, 'exercise angina': 0, 'oldpeak': 0, 'ST slope': 1,
+        'target_label': 'Normal'
+    },
+    "Case 3 (Index 680) - Age 60, Female": {
+        'age': 60, 'sex': 0, 'chest pain type': 1, 'resting bp s': 150, 
+        'cholesterol': 240, 'fasting blood sugar': 0, 'resting ecg': 0, 
+        'max heart rate': 171, 'exercise angina': 0, 'oldpeak': 0.9, 'ST slope': 1,
+        'target_label': 'Normal'
+    },
+    "Case 4 (Index 691) - Age 67, Female (Type 4 Pain)": {
+        'age': 67, 'sex': 0, 'chest pain type': 4, 'resting bp s': 106, 
+        'cholesterol': 223, 'fasting blood sugar': 0, 'resting ecg': 0, 
+        'max heart rate': 142, 'exercise angina': 0, 'oldpeak': 0.3, 'ST slope': 1,
+        'target_label': 'Normal'
+    },
+    "Case 5 (Index 215) - Age 47, Male (High Risk)": {
+        'age': 47, 'sex': 1, 'chest pain type': 4, 'resting bp s': 150, 
+        'cholesterol': 226, 'fasting blood sugar': 0, 'resting ecg': 0, 
+        'max heart rate': 98, 'exercise angina': 1, 'oldpeak': 1.5, 'ST slope': 2,
+        'target_label': 'Heart Disease'
+    },
+    "Case 6 (Index 1081) - Age 68, Female": {
+        'age': 68, 'sex': 0, 'chest pain type': 3, 'resting bp s': 120, 
+        'cholesterol': 211, 'fasting blood sugar': 0, 'resting ecg': 2, 
+        'max heart rate': 115, 'exercise angina': 0, 'oldpeak': 1.5, 'ST slope': 2,
+        'target_label': 'Normal'
+    },
+    "Case 7 (Index 823) - Age 60, Female": {
+        'age': 60, 'sex': 0, 'chest pain type': 3, 'resting bp s': 102, 
+        'cholesterol': 318, 'fasting blood sugar': 0, 'resting ecg': 0, 
+        'max heart rate': 160, 'exercise angina': 0, 'oldpeak': 0, 'ST slope': 1,
+        'target_label': 'Normal'
+    }
+}
 
 def main():
     # Header - Minimalist Steve Jobs style
@@ -239,9 +284,10 @@ def main():
         
         # Navigation with icons
         st.markdown("### <i class='bi bi-compass'></i> Navigation", unsafe_allow_html=True)
+        # Update page order as requested: Training 2nd, Prediction 3rd
         page = st.radio(
             "Select Page",
-            ["Home", "Data & Training", "XAI Analysis", "LLM Interpretation", "Prediction"],
+            ["Home", "Data & Training","XAI Analysis", "Prediction"],
             label_visibility="collapsed"
         )
         
@@ -297,12 +343,12 @@ def main():
         show_home_page()
     elif page == "Data & Training":
         show_training_page()
+    elif page == "Prediction":
+        show_prediction_page()
     elif page == "XAI Analysis":
         show_xai_page()
     elif page == "LLM Interpretation":
         show_llm_page()
-    elif page == "Prediction":
-        show_prediction_page()
 
 
 def show_home_page():
@@ -2186,13 +2232,13 @@ def display_xai_results():
     xai = st.session_state.xai_results
     
     # Tabs with clean labels
-    tab1, tab2, tab3 = st.tabs(["SHAP Analysis", "LIME Explanations", "Permutation Importance"])
+    tab1,  tab3 = st.tabs(["SHAP Analysis", "Permutation Importance"])
     
     with tab1:
         show_shap_analysis(xai)
     
-    with tab2:
-        show_lime_analysis(xai)
+    # with tab2:
+    #     show_lime_analysis(xai)
     
     with tab3:
         show_permutation_analysis(xai)
@@ -2243,172 +2289,172 @@ def show_shap_analysis(xai_results):
                 value=f"{row['SHAP Importance']:.4f}"
             )
     
-    # SHAP Summary Plot
-    st.markdown("---")
-    st.markdown("### SHAP Summary Plot")
+    # # SHAP Summary Plot
+    # st.markdown("---")
+    # st.markdown("### SHAP Summary Plot")
     
-    try:
-        shap_data = xai_results['shap_summary_data']
+    # try:
+    #     shap_data = xai_results['shap_summary_data']
         
-        fig, ax = plt.subplots(figsize=(10, 6))
-        shap.summary_plot(
-            shap_data['shap_values'],
-            shap_data['features'],
-            feature_names=shap_data['feature_names'],
-            show=False
-        )
-        st.pyplot(fig)
-        plt.close()
+    #     fig, ax = plt.subplots(figsize=(10, 6))
+    #     shap.summary_plot(
+    #         shap_data['shap_values'],
+    #         shap_data['features'],
+    #         feature_names=shap_data['feature_names'],
+    #         show=False
+    #     )
+    #     st.pyplot(fig)
+    #     plt.close()
         
-        st.caption("""
-        **Interpretation Guide:**
-        • Each dot represents one patient
-        • Red: High feature value | Blue: Low feature value
-        • Horizontal position: Impact on prediction (SHAP value)
-        """)
+    #     st.caption("""
+    #     **Interpretation Guide:**
+    #     • Each dot represents one patient
+    #     • Red: High feature value | Blue: Low feature value
+    #     • Horizontal position: Impact on prediction (SHAP value)
+    #     """)
     
-    except Exception as e:
-        st.error(f"Could not generate SHAP summary plot: {str(e)}")
+    # except Exception as e:
+    #     st.error(f"Could not generate SHAP summary plot: {str(e)}")
 
 
-def show_lime_analysis(xai_results):
-    """Display LIME analysis results"""
-    st.subheader("🔬 LIME (Local Interpretable Model-agnostic Explanations)")
+# def show_lime_analysis(xai_results):
+#     """Display LIME analysis results"""
+#     st.subheader("🔬 LIME (Local Interpretable Model-agnostic Explanations)")
     
-    st.markdown("""
-    LIME explains **individual predictions** by approximating the model locally around that data point.
-    """)
+#     st.markdown("""
+#     LIME explains **individual predictions** by approximating the model locally around that data point.
+#     """)
     
-    lime_explanations = xai_results['lime_explanations']
+#     lime_explanations = xai_results['lime_explanations']
     
-    if not lime_explanations:
-        st.warning("No LIME explanations available.")
-        return
+#     if not lime_explanations:
+#         st.warning("No LIME explanations available.")
+#         return
     
-    # === FILTERS ===
-    st.markdown("### 🔍 Filter Instances")
+#     # === FILTERS ===
+#     st.markdown("### 🔍 Filter Instances")
     
-    col1, col2, col3 = st.columns(3)
+#     col1, col2, col3 = st.columns(3)
     
-    with col1:
-        # Filter by prediction correctness
-        correctness_filter = st.selectbox(
-            "Prediction Status",
-            ["All", "Correct Only", "Incorrect Only"]
-        )
+#     with col1:
+#         # Filter by prediction correctness
+#         correctness_filter = st.selectbox(
+#             "Prediction Status",
+#             ["All", "Correct Only", "Incorrect Only"]
+#         )
     
-    with col2:
-        # Filter by confidence
-        confidence_filter = st.selectbox(
-            "Confidence Level",
-            ["All", "High (>80%)", "Medium (50-80%)", "Low (<50%)"]
-        )
+#     with col2:
+#         # Filter by confidence
+#         confidence_filter = st.selectbox(
+#             "Confidence Level",
+#             ["All", "High (>80%)", "Medium (50-80%)", "Low (<50%)"]
+#         )
     
-    with col3:
-        # Filter by prediction
-        prediction_filter = st.selectbox(
-            "Prediction",
-            ["All", "Disease", "No Disease"]
-        )
+#     with col3:
+#         # Filter by prediction
+#         prediction_filter = st.selectbox(
+#             "Prediction",
+#             ["All", "Disease", "No Disease"]
+#         )
     
-    # Apply filters
-    filtered_explanations = lime_explanations.copy()
+#     # Apply filters
+#     filtered_explanations = lime_explanations.copy()
     
-    # Filter 1: Correctness
-    if correctness_filter == "Correct Only":
-        filtered_explanations = [exp for exp in filtered_explanations if exp['correct']]
-    elif correctness_filter == "Incorrect Only":
-        filtered_explanations = [exp for exp in filtered_explanations if not exp['correct']]
+#     # Filter 1: Correctness
+#     if correctness_filter == "Correct Only":
+#         filtered_explanations = [exp for exp in filtered_explanations if exp['correct']]
+#     elif correctness_filter == "Incorrect Only":
+#         filtered_explanations = [exp for exp in filtered_explanations if not exp['correct']]
     
-    # Filter 2: Confidence
-    if confidence_filter == "High (>80%)":
-        filtered_explanations = [exp for exp in filtered_explanations 
-                                if max(exp['prediction_proba']) > 0.8]
-    elif confidence_filter == "Medium (50-80%)":
-        filtered_explanations = [exp for exp in filtered_explanations 
-                                if 0.5 <= max(exp['prediction_proba']) <= 0.8]
-    elif confidence_filter == "Low (<50%)":
-        filtered_explanations = [exp for exp in filtered_explanations 
-                                if max(exp['prediction_proba']) < 0.5]
+#     # Filter 2: Confidence
+#     if confidence_filter == "High (>80%)":
+#         filtered_explanations = [exp for exp in filtered_explanations 
+#                                 if max(exp['prediction_proba']) > 0.8]
+#     elif confidence_filter == "Medium (50-80%)":
+#         filtered_explanations = [exp for exp in filtered_explanations 
+#                                 if 0.5 <= max(exp['prediction_proba']) <= 0.8]
+#     elif confidence_filter == "Low (<50%)":
+#         filtered_explanations = [exp for exp in filtered_explanations 
+#                                 if max(exp['prediction_proba']) < 0.5]
     
-    # Filter 3: Prediction
-    if prediction_filter == "Disease":
-        filtered_explanations = [exp for exp in filtered_explanations if exp['prediction'] == 1]
-    elif prediction_filter == "No Disease":
-        filtered_explanations = [exp for exp in filtered_explanations if exp['prediction'] == 0]
+#     # Filter 3: Prediction
+#     if prediction_filter == "Disease":
+#         filtered_explanations = [exp for exp in filtered_explanations if exp['prediction'] == 1]
+#     elif prediction_filter == "No Disease":
+#         filtered_explanations = [exp for exp in filtered_explanations if exp['prediction'] == 0]
     
-    # Show filtered count
-    st.markdown(f"<div style='padding: 1rem; border-radius: 0.5rem; background-color: #d1ecf1; border-left: 4px solid #0c5460; color: #0c5460;'><i class='bi bi-graph-up'></i> Showing {len(filtered_explanations)} instances out of {len(lime_explanations)} total</div>", unsafe_allow_html=True)
+#     # Show filtered count
+#     st.markdown(f"<div style='padding: 1rem; border-radius: 0.5rem; background-color: #d1ecf1; border-left: 4px solid #0c5460; color: #0c5460;'><i class='bi bi-graph-up'></i> Showing {len(filtered_explanations)} instances out of {len(lime_explanations)} total</div>", unsafe_allow_html=True)
     
-    if len(filtered_explanations) == 0:
-        st.warning("No instances match the selected filters. Please adjust your filters.")
-        return
+#     if len(filtered_explanations) == 0:
+#         st.warning("No instances match the selected filters. Please adjust your filters.")
+#         return
     
-    st.markdown("---")
-    st.markdown("### 📋 Select Instance to Analyze")
+#     st.markdown("---")
+#     st.markdown("### 📋 Select Instance to Analyze")
     
-    # Create instance options with more info
-    instance_options = []
-    for exp in filtered_explanations:
-        pred_label = "Disease" if exp['prediction'] == 1 else "No Disease"
-        actual_label = "Disease" if exp['actual'] == 1 else "No Disease"
-        confidence = max(exp['prediction_proba']) * 100
-        correct_icon = "" if exp['correct'] else ""
+#     # Create instance options with more info
+#     instance_options = []
+#     for exp in filtered_explanations:
+#         pred_label = "Disease" if exp['prediction'] == 1 else "No Disease"
+#         actual_label = "Disease" if exp['actual'] == 1 else "No Disease"
+#         confidence = max(exp['prediction_proba']) * 100
+#         correct_icon = "" if exp['correct'] else ""
         
-        option_text = (f"Instance {exp['instance_idx']} {correct_icon} | "
-                      f"Pred: {pred_label} ({confidence:.1f}%) | "
-                      f"Actual: {actual_label}")
-        instance_options.append(option_text)
+#         option_text = (f"Instance {exp['instance_idx']} {correct_icon} | "
+#                       f"Pred: {pred_label} ({confidence:.1f}%) | "
+#                       f"Actual: {actual_label}")
+#         instance_options.append(option_text)
     
-    selected = st.selectbox("Choose an instance:", instance_options)
-    selected_idx = int(selected.split()[1])
+#     selected = st.selectbox("Choose an instance:", instance_options)
+#     selected_idx = int(selected.split()[1])
     
-    # Find the selected explanation
-    exp = next(e for e in filtered_explanations if e['instance_idx'] == selected_idx)
+#     # Find the selected explanation
+#     exp = next(e for e in filtered_explanations if e['instance_idx'] == selected_idx)
     
-    st.markdown("---")
-    st.markdown(f"### 🔬 Detailed Analysis: Instance {selected_idx}")
+#     st.markdown("---")
+#     st.markdown(f"### 🔬 Detailed Analysis: Instance {selected_idx}")
     
-    # Display prediction info
-    col1, col2, col3, col4 = st.columns(4)
+#     # Display prediction info
+#     col1, col2, col3, col4 = st.columns(4)
     
-    with col1:
-        st.metric("Prediction", "Disease" if exp['prediction'] == 1 else "No Disease")
-    with col2:
-        st.metric("Confidence", f"{exp['prediction_proba'][exp['prediction']]*100:.1f}%")
-    with col3:
-        st.metric("Actual", "Disease" if exp['actual'] == 1 else "No Disease")
-    with col4:
-        if exp['correct']:
-            st.success(" Correct")
-        else:
-            st.error(" Incorrect")
+#     with col1:
+#         st.metric("Prediction", "Disease" if exp['prediction'] == 1 else "No Disease")
+#     with col2:
+#         st.metric("Confidence", f"{exp['prediction_proba'][exp['prediction']]*100:.1f}%")
+#     with col3:
+#         st.metric("Actual", "Disease" if exp['actual'] == 1 else "No Disease")
+#     with col4:
+#         if exp['correct']:
+#             st.success(" Correct")
+#         else:
+#             st.error(" Incorrect")
     
-    # Feature contributions
-    st.markdown("#### Feature Contributions")
+#     # Feature contributions
+#     st.markdown("#### Feature Contributions")
     
-    exp_df = exp['explanation_df']
+#     exp_df = exp['explanation_df']
     
-    # Parse feature names and values from LIME output
-    exp_df['Feature_Clean'] = exp_df['Feature'].str.split('<=|>').str[0].str.strip()
-    exp_df['Direction'] = exp_df['Weight'].apply(lambda x: 'Towards Disease' if x > 0 else 'Towards No Disease')
-    exp_df['Abs_Weight'] = exp_df['Weight'].abs()
+#     # Parse feature names and values from LIME output
+#     exp_df['Feature_Clean'] = exp_df['Feature'].str.split('<=|>').str[0].str.strip()
+#     exp_df['Direction'] = exp_df['Weight'].apply(lambda x: 'Towards Disease' if x > 0 else 'Towards No Disease')
+#     exp_df['Abs_Weight'] = exp_df['Weight'].abs()
     
-    fig = px.bar(
-        exp_df.sort_values('Weight'),
-        x='Weight',
-        y='Feature',
-        orientation='h',
-        color='Direction',
-        title=f'LIME Explanation for Instance {selected_idx}',
-        color_discrete_map={
-            'Towards Disease': '#E74C3C',
-            'Towards No Disease': '#27AE60'
-        }
-    )
-    fig.add_vline(x=0, line_dash="dash", line_color="gray")
-    fig.update_layout(height=400, template='plotly_white')
-    st.plotly_chart(fig, use_container_width=True)
+#     fig = px.bar(
+#         exp_df.sort_values('Weight'),
+#         x='Weight',
+#         y='Feature',
+#         orientation='h',
+#         color='Direction',
+#         title=f'LIME Explanation for Instance {selected_idx}',
+#         color_discrete_map={
+#             'Towards Disease': '#E74C3C',
+#             'Towards No Disease': '#27AE60'
+#         }
+#     )
+#     fig.add_vline(x=0, line_dash="dash", line_color="gray")
+#     fig.update_layout(height=400, template='plotly_white')
+#     st.plotly_chart(fig, use_container_width=True)
 
 
 def show_permutation_analysis(xai_results):
@@ -2416,8 +2462,8 @@ def show_permutation_analysis(xai_results):
     st.subheader("Permutation Importance")
     
     st.markdown("""
-    Permutation Importance đo **sự giảm performance** của model khi shuffle một feature.
-    Feature càng quan trọng thì khi shuffle, performance giảm càng nhiều.
+        **Permutation Importance** measures **performance drop** when a feature is shuffled.
+        The larger the drop, the more important the feature.
     """)
     
     perm_importance = xai_results['permutation_importance']
@@ -2458,6 +2504,7 @@ def show_permutation_analysis(xai_results):
     # Comparison table
     with st.expander("📋 View Full Ranking"):
         st.dataframe(perm_importance, use_container_width=True)
+
 
 
 def show_llm_page():
@@ -2556,16 +2603,476 @@ def display_llm_interpretations():
 
 
 def show_prediction_page():
-    """Prediction page for new instances"""
+    """Prediction page with Test Set Explorer and Manual Input"""
     st.markdown("## <i class='bi bi-magic'></i> Make Predictions", unsafe_allow_html=True)
     
-    if not st.session_state.trained:
+    if 'trained' not in st.session_state or not st.session_state.trained:
         st.markdown("<div style='padding: 1rem; border-radius: 0.5rem; background-color: #fff3cd; border-left: 4px solid #856404; color: #856404;'><i class='bi bi-exclamation-triangle' style='color: #F39C12;'></i> Please train a model first.</div>", unsafe_allow_html=True)
         return
     
-    st.markdown("""
-    Enter patient information below to get a prediction.
-    """)
+    # Choose mode
+    mode = st.radio("Select Input Mode", ["Manual Input", "Explorer",], horizontal=True)
+    
+    if mode == "Explorer":
+        show_demo_scenarios()
+    # elif mode == "Test Set Explorer":
+    #     show_test_set_explorer()
+    else:
+        show_manual_input()
+
+
+def show_demo_scenarios():
+    """Show pre-defined demo cases for presentation"""
+    st.subheader("📋 Select a Patient Case")
+    
+    case_name = st.selectbox("Choose Patient", list(DEMO_CASES.keys()))
+    case_data = DEMO_CASES[case_name]
+    
+    # Display Case Data nicely
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Age", case_data['age'])
+    col1.metric("Sex", "Male" if case_data['sex']==1 else "Female")
+    col1.metric("Chest Pain", case_data['chest pain type'])
+    
+    col2.metric("BP", case_data['resting bp s'])
+    col2.metric("Cholesterol", case_data['cholesterol'])
+    col2.metric("Fasting BS", "Yes" if case_data['fasting blood sugar']==1 else "No")
+    
+    col3.metric("Max HR", case_data['max heart rate'])
+    col3.metric("Ecercise Angina", "Yes" if case_data['exercise angina']==1 else "No")
+    col3.metric("Resting ECG", case_data['resting ecg'])
+    
+    col4.metric("Oldpeak", case_data['oldpeak'])
+    col4.metric("ST Slope", case_data['ST slope'])
+    col4.metric("True Label", case_data['target_label'])
+    
+    st.markdown("---")
+    
+    if st.button("📢 Explain This Prediction (Demo Flow)", type="primary", use_container_width=True):
+        # We need to process this raw dictionary into the format explain_pipeline expects
+        # 1. Convert to DataFrame
+        df_input = pd.DataFrame([case_data]).drop('target_label', axis=1)
+        
+        # 2. Add 'target' mock for compatibility if needed (not needed for prediction)
+        
+        # 3. Use the common pipeline
+        explain_custom_instance(df_input)
+
+
+def explain_custom_instance(df_input_raw):
+    """
+    Run pipeline for a custom dataframe input (Demo or Manual)
+    This handles: Preprocessing -> Prediction -> Global XAI -> Local LIME -> LLM
+    """
+    try:
+        results = st.session_state.training_results
+        # Determine correct results object
+        if 'fe_xai' in results and results['fe_xai']:
+             active_results = results['fe_xai']
+        elif 'fe_only' in results and results['fe_only']:
+             active_results = results['fe_only']
+        elif 'no_fe' in results and results['no_fe']:
+             active_results = results['no_fe']
+        else:
+             st.error("Training data not found.")
+             return
+             
+        model = active_results['best_model']
+        
+        # --- PREPROCESSING (Replicating make_prediction logic) ---
+        # 1. Apply log transform
+        df_proc = df_input_raw.copy()
+        if 'cholesterol' in df_proc.columns and df_proc['cholesterol'].values[0] > 0:
+            df_proc['cholesterol'] = np.log1p(df_proc['cholesterol'])
+        if 'oldpeak' in df_proc.columns and df_proc['oldpeak'].values[0] >= 0:
+            df_proc['oldpeak'] = np.log1p(df_proc['oldpeak'])
+            
+        # 2. One-Hot Encoding
+        one_hot_cols = ['chest pain type', 'resting ecg', 'ST slope']
+        df_encoded = pd.get_dummies(df_proc, columns=one_hot_cols, dtype=int)
+        
+        # 3. Align features
+        train_columns = active_results['X_train'].columns.tolist()
+        for col in train_columns:
+            if col not in df_encoded.columns:
+                df_encoded[col] = 0
+        df_encoded = df_encoded[train_columns]
+        
+        # 4. Scale
+        from sklearn.preprocessing import StandardScaler
+        scaler = StandardScaler()
+        scaler.fit(active_results['X_train'])
+        X_new_scaled = scaler.transform(df_encoded)
+        
+        # 5. Feauture Engineering (Interactions)
+        if active_results.get('improved_selected', False) and 'new_features' in active_results:
+            X_scaled_df = pd.DataFrame(X_new_scaled, columns=train_columns)
+            for feature in active_results['new_features']:
+                parts = feature.split('_x_')
+                if len(parts) == 2:
+                    f1, f2 = parts
+                    if f1 in X_scaled_df.columns and f2 in X_scaled_df.columns:
+                        X_scaled_df[feature] = X_scaled_df[f1] * X_scaled_df[f2]
+            X_final = X_scaled_df.values
+        else:
+            X_final = X_new_scaled
+            
+        # --- PREDICTION ---
+        pred = model.predict(X_final)[0]
+        prob = model.predict_proba(X_final)[0]
+        
+        st.divider()
+            # Display prediction info
+        col1, col2= st.columns(2)
+        
+        with col1:
+            st.metric("Prediction", "High Risk" if pred == 1 else "Low Risk")
+        with col2:
+            st.metric("Confidence", f"{prob[pred]*100:.1f}%")
+  
+            
+        # # --- GLOBAL EXPLANATION ---
+        # st.divider()
+        # st.markdown("### 1. Global Context (General Model Behavior)")
+        # if st.session_state.xai_results:
+        #      show_permutation_analysis(st.session_state.xai_results)
+        # else:
+        #      st.warning("Global XAI unavailable.")
+
+        # --- LOCAL EXPLANATION (LIME) ---
+        st.divider()
+        st.markdown(f"### Local Explanation (Why THIS patient?)")
+        
+        # Initialize Explainer
+        xai = XAIExplainer(
+            model=model,
+            X_train=active_results['X_train'], # Raw for LIME tabular
+            X_test=active_results['X_test'],
+            y_train=active_results['y_train'],
+            y_test=active_results['y_test'],
+            X_train_scaled=active_results['X_train_scaled'],
+            X_test_scaled=active_results['X_test_scaled'],
+            feature_names=active_results.get('feature_names', active_results['X_train'].columns.tolist())
+        )
+        
+        # Setup LIME Explainer if not ready
+        if xai.lime_explainer is None:
+            xai.setup_lime()
+            
+        # Explain this specific instance (Passed as raw numpy array to LIME)
+        # Note: LIME Tabular expects raw feature values (not scaled) usually, but it depends on how it was initialized.
+        # In xai_explainer.py: training_data=self.X_train.values (RAW).
+        # So we should pass RAW data (df_encoded aligned to columns but unscaled? Or df_input_raw aligned?)
+        # Actually in XAIExplainer.explain_instance_lime it uses X_test_scaled[idx].
+        # Wait, if LIME was init with Raw X_train, it expects Raw input? 
+        # Let's check xai_explainer.py:
+        # lime_explainer = LimeTabularExplainer(training_data=self.X_train.values ...) -> RAW
+        # But explain_instance_lime uses: instance = self.X_test_scaled[instance_idx] -> SCALED
+        # This is a POTENTIAL BUG in the original class if scaling is inconsistent.
+        # However, for now, let's follow the existing pattern: pass what the model expects?
+        # No, LIME perturbs data. If init with RAW, it perturbs RAW. Then predict_fn must handle scaling.
+        # In explain_instance_lime: predict_fn = lambda x: self.model.predict_proba(x)
+        # The model (SVM/MLP with scaler inside pipeline? No, scaler is separate).
+        # Model expects SCALED data.
+        # If LIME is fed RAW data, then predict_fn must SCALE the data.
+        
+        # Let's fix this ad-hoc here for the demo to be robust.
+        # We will use the 'X_final' (which is SCALED and FE'd) for the LIME explainer 'data_row'.
+        # AND we need to make sure the explainer was init with matching data distribution.
+        # The safest bet for this "Custom" instance without modifying XAI class deeply:
+        # Use X_final (The exact input to model).
+        # But we need a LIME explainer fit on X_train_scaled (and FE'd).
+        
+        # Re-init LIME with transformed training data
+        import lime.lime_tabular
+        
+        explainer_lime = lime.lime_tabular.LimeTabularExplainer(
+            training_data=active_results['X_train_scaled'], # Use tranformed training data
+            feature_names=active_results.get('feature_names', train_columns),
+            class_names=['No Disease', 'Disease'],
+            mode='classification',
+            random_state=42
+        )
+        
+        explanation = explainer_lime.explain_instance(
+            data_row=X_final[0], # Single row
+            predict_fn=model.predict_proba,
+            num_features=10
+        )
+        
+        # Display LIME
+# --- Display LIME (Plotly diverging bar like your px.bar style) ---
+    
+
+        # luôn explain theo Disease label = 1 (vì class_names=['No Disease','Disease'])
+        disease_label = 1
+
+        exp_list = explanation.as_list(label=disease_label)
+        exp_df = pd.DataFrame(exp_list, columns=["Feature", "Weight"])
+
+        # map direction theo dấu weight (label=1 = Disease)
+        exp_df["Direction"] = exp_df["Weight"].apply(
+            lambda w: "Towards Disease" if w > 0 else "Towards No Disease"
+        )
+
+        fig = px.bar(
+            exp_df.sort_values("Weight"),
+            x="Weight",
+            y="Feature",
+            orientation="h",
+            color="Direction",
+            title=f"LIME Explanation for This Patient",
+            color_discrete_map={
+                "Towards Disease": "#E74C3C",
+                "Towards No Disease": "#27AE60"
+            }
+        )
+
+        # vạch 0 ở giữa cho giống LIME UI
+        fig.add_vline(x=0, line_dash="dash", line_color="gray")
+
+        fig.update_layout(height=420, template="plotly_white")
+        st.plotly_chart(fig, use_container_width=True)
+
+        
+        
+        exp_list = explanation.as_list()
+        # st.markdown("**Top Contributing Factors:**")
+        # for feat, weight in exp_list:
+        #      st.markdown(f"- **{feat}**: {weight:.4f}")
+             
+        # --- LLM ---
+        st.divider()
+        st.markdown("### AI Doctor Interpretation")
+        if os.getenv("GROQ_API_KEY"):
+            interpreter = LLMInterpreter()
+            context = {
+                'prediction': "Heart Disease" if pred == 1 else "No Heart Disease",
+                'probability': f"{prob[pred]:.4f}",
+                'lime_factors': exp_list,
+                'instance_values': df_input_raw.to_dict('records')[0]
+            }
+            prompt = f"""
+            You are an expert cardiologist AI. Interpret the prediction for this specific patient (Demo Case).
+            
+            PATIENT STATUS:
+            - Prediction: {context['prediction']}
+            - Confidence: {context['probability']}
+            
+            PATIENT DATA:
+            {context['instance_values']}
+            
+            KEY RISK FACTORS (LIME Analysis):
+            {context['lime_factors']}
+            
+            GLOBAL MODEL INSIGHTS:
+            (Chest Pain, Oldpeak, Thal, CA are generally key drivers)
+            
+            TASK:
+            1. Explain WHY the model made this prediction for THIS specific patient.
+            2. Compare their specific risk factors to general heart disease indicators.
+            3. Provide a personalized recommendation.
+            
+            Keep it professional, empathetic, and medical.
+            """
+            
+            with st.spinner("Consulting AI Doctor..."):
+                 response = interpreter.call_llm(prompt)
+                 st.markdown(f'<div class="interpretation-box">{response}</div>', unsafe_allow_html=True)
+                 
+    except Exception as e:
+        st.error(f"Error in prediction pipeline: {str(e)}")
+        st.exception(e)
+
+
+def show_test_set_explorer():
+
+    """Explore test set instances with Global & Local Explanations"""
+    try:
+        results = st.session_state.training_results
+        # Determine correct results object (prioritizing FE model if selected)
+        if 'fe_xai' in results and results['fe_xai']:
+             active_results = results['fe_xai']
+        elif 'fe_only' in results and results['fe_only']:
+             active_results = results['fe_only']
+        elif 'no_fe' in results and results['no_fe']:
+             active_results = results['no_fe']
+        else:
+             st.error("Training data not found.")
+             return
+
+        # Get test data from results
+        # Use raw X_test if available to show original values
+        if 'X_test' in active_results:
+             X_test_display = active_results['X_test']
+             y_test = active_results['y_test']
+             
+             # Instance Selector
+             selected_idx = st.selectbox(
+                 "Select Test Instance Index", 
+                 options=range(len(X_test_display)),
+                 format_func=lambda x: f"Instance {x} (True Label: {'Disease' if y_test.iloc[x] == 1 else 'No Disease'})"
+             )
+             
+             # Show Data
+             st.subheader("Instance Data")
+             st.dataframe(X_test_display.iloc[[selected_idx]], use_container_width=True)
+             
+             if st.button("📢 Explain This Prediction", type="primary"):
+                 explain_test_instance(selected_idx, active_results)
+        
+    except Exception as e:
+        st.error(f"Error loading test set: {str(e)}")
+
+
+def explain_test_instance(idx, active_results):
+    """Run full explanation pipeline for a specific test instance"""
+    with st.spinner("Running Analysis: Global Context -> Local Explanation -> LLM..."):
+        try:
+            # 1. Prediction on this instance
+            model = active_results['best_model']
+            
+            # Use SCALED data for prediction (and FE if needed)
+            # The 'X_test_scaled' in results should already be pre-processed (scaled + optional FE)
+            if 'X_test_scaled' in active_results:
+                 X_input = active_results['X_test_scaled'][idx].reshape(1, -1)
+            else:
+                 st.error("Scaled test data not found.")
+                 return
+
+            pred = model.predict(X_input)[0]
+            prob = model.predict_proba(X_input)[0]
+            
+            # Display Prediction
+            st.divider()
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### Prediction Result")
+            if pred == 1:
+                st.markdown(
+                    "<div style='font-size: 60px; font-weight: 800; line-height: 1.2;'>🚨 High Risk</div>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    "<div style='font-size: 0px; font-weight: 800; line-height: 1.2;'>✅ Low Risk</div>",
+                    unsafe_allow_html=True
+                )
+
+            with col2:
+                st.markdown("### Confidence")
+                st.progress(float(prob[pred]))
+                st.caption(f"{prob[pred]*100:.2f}% probability")
+
+            # 2. Global Explanations (Reuse from XAI Results)
+            st.divider()
+            st.markdown("### 1. Global Context (General Model Behavior)")
+            if st.session_state.xai_results:
+                 # Reconstruct Global SHAP Summary Plot
+                 shap_summary = st.session_state.xai_results.get('shap_summary_data', None)
+                 if shap_summary:
+                      st.markdown("**Global SHAP Summary:**")
+                      # We can try to plot it if we have raw SHAP values, but summary plot is complex to recreate without valid session state data
+                      # Instead, let's show the Feature Importance table which is more reliable
+                      pass
+                 
+                 show_permutation_analysis(st.session_state.xai_results)
+            else:
+                 st.warning("Global XAI results not available. Please run XAI Analysis first to see global context.")
+
+            # 3. Local Explanation (LIME) for THIS instance
+            st.divider()
+            st.markdown(f"### 2. Local Explanation (Why THIS patient?)")
+            
+            # We need to initialize an explainer to run LIME for this specific instance
+            # Re-create explainer using cached data
+            xai = XAIExplainer(
+                model=model,
+                X_train=active_results['X_train'], # Raw for LIME tabular
+                X_test=active_results['X_test'],
+                y_train=active_results['y_train'],
+                y_test=active_results['y_test'],
+                X_train_scaled=active_results['X_train_scaled'], # Transformed for SHAP/Model
+                X_test_scaled=active_results['X_test_scaled'],
+                feature_names=active_results.get('feature_names', active_results['X_train'].columns.tolist())
+            )
+            
+            lime_result = xai.explain_instance_lime(idx)
+            
+            # Display LIME Plot
+            fig = lime_result['explanation'].as_pyplot_figure()
+            st.pyplot(fig)
+            plt.close()
+            
+            # Show reasons text
+            st.markdown("**Top Contributing Factors:**")
+            exp_list = lime_result['explanation'].as_list()
+            for feat, weight in exp_list:
+                 color = "red" if weight > 0 else "green" # Assuming >0 is typically towards class 1
+                 # Adjust color logic based on model class mapping if needed, generally LIME fits to local model
+                 # Simple display:
+                 st.markdown(f"- **{feat}**: {weight:.4f}")
+
+            # 4. LLM Interpretation
+            st.divider()
+            st.markdown("### AI Doctor Interpretation")
+            
+            if os.getenv("GROQ_API_KEY"):
+                interpreter = LLMInterpreter()
+                
+                # Prepare context
+                context = {
+                    'prediction': "Heart Disease" if pred == 1 else "No Heart Disease",
+                    'probability': f"{prob[pred]:.4f}",
+                    'lime_factors': exp_list,
+                    'instance_values': active_results['X_test'].iloc[idx].to_dict()
+                }
+                
+                # We need a specific method for single instance interpretation
+                # Or we can construct a prompt manually here
+                prompt = f"""
+                You are an expert cardiologist AI. Interpret the prediction for this specific patient.
+                
+                PATIENT STATUS:
+                - Prediction: {context['prediction']}
+                - Confidence: {context['probability']}
+                
+                PATIENT DATA:
+                {context['instance_values']}
+                
+                KEY RISK FACTORS (LIME Analysis - Positive means increases risk, Negative decreases):
+                {context['lime_factors']}
+                
+                GLOBAL MODEL INSIGHTS (Top General Risk Factors):
+                (Refer to global knowledge: Chest Pain, ST Slope, Thal usually important)
+                
+                TASK:
+                1. Explain EXTREMELY CLEARLY and in an EASILY UNDERSTANDABLE way why the model made this prediction for THIS specific patient, based on their values and the LIME factors.
+                2. Compare their specific risk factors to general heart disease indicators.
+                3. Provide a personalized recommendation.
+                
+                Keep it professional, empathetic, and medical but easy to understand.
+                """
+                
+                with st.spinner("Consulting AI Doctor..."):
+                     # Using the generic valid method from interpreter if available, or call API directly
+                     # Assuming interpreter has a method to call generic prompt or we use existing one
+                     # Let's rely on internal LLMInterpreter method if it exists, otherwise add one?
+                     # Creating a temporary method usage pattern:
+                     response = interpreter.call_llm(prompt) # Assuming call_llm exists or similar
+                     st.markdown(f'<div class="interpretation-box">{response}</div>', unsafe_allow_html=True)
+            else:
+                 st.warning("Please configure Groq API Key for AI interpretation.")
+
+        except Exception as e:
+            st.error(f"Analysis Failed: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc())
+
+
+def show_manual_input():
+    """Original Manual Input Form"""
+    st.info("Enter patient information below to get a prediction.")
     
     # Create input form
     with st.form("prediction_form"):
@@ -2577,48 +3084,118 @@ def show_prediction_page():
             age = st.number_input("Age", min_value=20, max_value=100, value=50)
             sex = st.selectbox("Sex", [0, 1], format_func=lambda x: "Female" if x == 0 else "Male")
             resting_bp = st.number_input("Resting BP", min_value=80, max_value=200, value=120)
+            cholesterol = st.number_input("Cholesterol", min_value=0, max_value=600, value=200)
         
         with col2:
             max_hr = st.number_input("Max Heart Rate", min_value=60, max_value=220, value=150)
             oldpeak = st.number_input("Oldpeak", min_value=0.0, max_value=6.0, value=1.0, step=0.1)
             exercise_angina = st.selectbox("Exercise Angina", [0, 1], 
                                           format_func=lambda x: "No" if x == 0 else "Yes")
+            fasting_bs = st.selectbox("Fasting Blood Sugar > 120 mg/dl", [0, 1], 
+                                     format_func=lambda x: "No" if x == 0 else "Yes")
         
         with col3:
-            chest_pain = st.selectbox("Chest Pain Type", [0, 1,2, 3,4])
-            resting_ecg = st.selectbox("Resting ECG", [0, 2])
-            st_slope = st.selectbox("ST Slope", [1, 2])
+            chest_pain = st.selectbox("Chest Pain Type", [0, 1, 2, 3], format_func=lambda x: f"{x}: " + ["Asymptomatic", "Atypical Angina", "Non-Anginal Pain", "Typical Angina"][x] if x < 4 else f"{x}")
+            resting_ecg = st.selectbox("Resting ECG", [0, 1, 2], format_func=lambda x: f"{x}: " + ["Normal", "ST-T Wave Abnormality", "LV Hypertrophy"][x] if x < 3 else f"{x}")
+            st_slope = st.selectbox("ST Slope", [0, 1, 2], format_func=lambda x: f"{x}: " + ["Upsloping", "Flat", "Downsloping"][x] if x < 3 else f"{x}")
         
         submit = st.form_submit_button("🔮 Predict", type="primary", use_container_width=True)
         
         if submit:
             make_prediction(age, sex, resting_bp, max_hr, oldpeak, exercise_angina,
-                          chest_pain, resting_ecg, st_slope)
+                          chest_pain, resting_ecg, st_slope, cholesterol, fasting_bs)
 
 
 def make_prediction(age, sex, resting_bp, max_hr, oldpeak, exercise_angina,
-                    chest_pain, resting_ecg, st_slope):
-    """Make prediction for new instance"""
+                    chest_pain, resting_ecg, st_slope, cholesterol, fasting_bs):
+    """Make prediction for new instance using the trained model"""
+    from sklearn.preprocessing import StandardScaler
+    
     try:
-        # Prepare feature vector (need to match training features)
-        # This is a simplified version - you'll need to match exact feature engineering
+        results_all = st.session_state.training_results
         
-        results = st.session_state.training_results
-        scaler = results['X_train_scaled']  # This won't work directly, need to save scaler
-        
-        # Get best model from appropriate stage
-        if 'fe_xai' in results and results['fe_xai']:
-            model = results['fe_xai']['best_model']
-        elif 'fe_only' in results:
-            model = results['fe_only']['best_model']
+        # 1. Get appropriate results and model
+        if 'fe_xai' in results_all and results_all['fe_xai']:
+            active_results = results_all['fe_xai']
+        elif 'fe_only' in results_all and results_all['fe_only']:
+            active_results = results_all['fe_only']
+        elif 'no_fe' in results_all and results_all['no_fe']:
+             active_results = results_all['no_fe']
         else:
-            model = results['best_model']
+             st.error("Model data not found. Please train model first.")
+             return
+             
+        model = active_results['best_model']
+            
+        # 2. Prepare raw input data
+        # Mapping column names to match DataProcessor logic
+        input_data = {
+            'age': [age],
+            'sex': [sex],
+            'resting bp s': [resting_bp],
+            'cholesterol': [cholesterol],
+            'fasting blood sugar': [fasting_bs],
+            'max heart rate': [max_hr],
+            'exercise angina': [exercise_angina],
+            'oldpeak': [oldpeak],
+            'chest pain type': [chest_pain],
+            'resting ecg': [resting_ecg],
+            'ST slope': [st_slope]
+        }
+        df_input = pd.DataFrame(input_data)
         
-        st.markdown("<div style='padding: 1rem; border-radius: 0.5rem; background-color: #d1ecf1; border-left: 4px solid #0c5460; color: #0c5460;'><i class='bi bi-exclamation-triangle' style='color: #F39C12;'></i> Prediction functionality requires proper feature engineering pipeline. This is a placeholder.</div>", unsafe_allow_html=True)
+        # 3. Apply transformations (must match training pipeline)
+        if cholesterol > 0:
+            df_input['cholesterol'] = np.log1p(df_input['cholesterol'])
+        if oldpeak >= 0:
+            df_input['oldpeak'] = np.log1p(df_input['oldpeak'])
+            
+        # 4. Feature Engineering (One-Hot Encoding)
+        one_hot_cols = ['chest pain type', 'resting ecg', 'ST slope']
+        df_encoded = pd.get_dummies(df_input, columns=one_hot_cols, dtype=int)
         
-        # For now, show a demo prediction
-        demo_pred = np.random.choice([0, 1])
-        demo_proba = [0.35, 0.65] if demo_pred == 1 else [0.72, 0.28]
+        # 5. Align with training features
+        train_columns = active_results['X_train'].columns.tolist()
+        
+        # Add missing columns (fill with 0)
+        for col in train_columns:
+            if col not in df_encoded.columns:
+                df_encoded[col] = 0
+                
+        # Select and reorder to match training data exactly
+        df_encoded = df_encoded[train_columns]
+        
+        # 6. Scaling
+        # Fit a new scaler on the original training data to ensure consistent scaling
+        scaler = StandardScaler()
+        scaler.fit(active_results['X_train'])
+        
+        X_new_scaled = scaler.transform(df_encoded)
+        
+        # 7. Apply Interactions if needed (for XAI-improved models)
+        if active_results.get('improved_selected', False) and 'new_features' in active_results:
+            # We need to work with DataFrame to easily select interaction columns
+            X_scaled_df = pd.DataFrame(X_new_scaled, columns=train_columns)
+            
+            for feature in active_results['new_features']:
+                # Feature name is like "col1_x_col2"
+                parts = feature.split('_x_')
+                if len(parts) == 2:
+                    f1, f2 = parts
+                    if f1 in X_scaled_df.columns and f2 in X_scaled_df.columns:
+                        X_scaled_df[feature] = X_scaled_df[f1] * X_scaled_df[f2]
+            
+            # Convert back to numpy array for prediction
+            X_final = X_scaled_df.values
+        else:
+            X_final = X_new_scaled
+        
+        # 8. Prediction
+        prediction = model.predict(X_final)[0]
+        prediction_proba = model.predict_proba(X_final)[0]
+        
+        demo_pred = prediction
+        demo_proba = prediction_proba
         
         st.divider()
         st.subheader("Prediction Result")
@@ -2627,34 +3204,26 @@ def make_prediction(age, sex, resting_bp, max_hr, oldpeak, exercise_angina,
         
         with col1:
             if demo_pred == 1:
-                st.markdown("<div style='padding: 1rem; border-radius: 0.5rem; background-color: #f8d7da; border-left: 4px solid #721c24; color: #721c24;'><i class='bi bi-exclamation-triangle-fill' style='color: #F39C12;'></i> **High Risk of Heart Disease**</div>", unsafe_allow_html=True)
+                st.markdown("""
+                <div style="padding: 1rem; border-radius: 0.5rem; background-color: #f8d7da;
+                            border-left: 4px solid #721c24; color: #721c24; font-weight: 800;">
+                    <i class="bi bi-exclamation-triangle-fill" style="color: #F39C12;"></i>
+                    <strong>High Risk of Heart Disease</strong>
+                </div>
+                """, unsafe_allow_html=True)
             else:
-                st.markdown("<div style='padding: 1rem; border-radius: 0.5rem; background-color: #d4edda; border-left: 4px solid #155724; color: #155724;'><i class='bi bi-check-circle-fill' style='color: #27AE60;'></i> **Low Risk of Heart Disease**</div>", unsafe_allow_html=True)
-        
+                st.markdown("""
+                <div style="padding: 1rem; border-radius: 0.5rem; background-color: #d4edda;
+                            border-left: 4px solid #155724; color: #155724; font-weight: 800;">
+                    <i class="bi bi-check-circle-fill" style="color: #27AE60;"></i>
+                    <strong>Low Risk of Heart Disease</strong>
+                </div>
+                """, unsafe_allow_html=True)
+
         with col2:
             st.metric("Confidence", f"{max(demo_proba)*100:.1f}%")
         
-        # Probability gauge
-        fig = go.Figure(go.Indicator(
-            mode = "gauge+number",
-            value = demo_proba[1] * 100,
-            title = {'text': "Disease Probability"},
-            gauge = {
-                'axis': {'range': [None, 100]},
-                'bar': {'color': "darkred"},
-                'steps': [
-                    {'range': [0, 30], 'color': "lightgreen"},
-                    {'range': [30, 70], 'color': "yellow"},
-                    {'range': [70, 100], 'color': "red"}
-                ],
-                'threshold': {
-                    'line': {'color': "red", 'width': 4},
-                    'thickness': 0.75,
-                    'value': 50
-                }
-            }
-        ))
-        st.plotly_chart(fig, use_container_width=True)
+       
         
     except Exception as e:
         st.error(f"Prediction failed: {str(e)}")

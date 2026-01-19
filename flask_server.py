@@ -19,7 +19,7 @@ _cached_model = None
 _cached_scaler = None
 _cached_feature_names = None
 _cached_training_data = None
-
+_cached_transformer = None  # To store FE transformer (InteractionFeatureEngine)
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -49,14 +49,17 @@ def train_model():
         
         # 2. Train models
         trainer = ModelTrainer()
-        training_results = trainer.full_training_pipeline(X, y)
+        # Enable XAI improvement to fix the reported issue
+        training_results = trainer.full_training_pipeline(X, y, enable_xai_improvement=True)
         
         # Cache results
-        global _cached_model, _cached_scaler, _cached_feature_names, _cached_training_data
+        global _cached_model, _cached_scaler, _cached_feature_names, _cached_training_data, _cached_transformer
         _cached_model = training_results['best_model']
         _cached_scaler = trainer.scaler
-        _cached_feature_names = X.columns.tolist()
+        # Use updated feature names if available (from FE)
+        _cached_feature_names = training_results.get('feature_names', X.columns.tolist())
         _cached_training_data = training_results
+        _cached_transformer = training_results.get('feature_transformer')
         
         # Prepare response
         response = {
@@ -101,11 +104,32 @@ def predict():
         
         # Convert to DataFrame and scale
         feature_df = pd.DataFrame([features])
+        # Reorder columns to match training data
+        # Note: _cached_feature_names might contain new features, so we filter/order by original columns first
+        # We assume 'features' input contains only original features
+        original_cols = [col for col in feature_df.columns if col in _cached_feature_names or 
+                        (col in _cached_feature_names[0].split('_x_')[0] if '_x_' in str(_cached_feature_names[0]) else True)]
+        # Actually easier: the scaler expects original dimensions usually.
+        # Wait, if scaler was fit on original X_train (before FE), we use it. 
+        # In ModelTrainer, scaler is fit on SPLIT data (split_and_scale). 
+        # InteractionFeatureEngine uses scaled data. 
+        # So flow is: Raw -> Scaler -> [FE Transformer] -> Model
+        
         feature_scaled = _cached_scaler.transform(feature_df)
         
+        # Apply Feature Engineering if exists
+        X_final = feature_scaled
+        if _cached_transformer is not None:
+             # Transformer expects DataFrame with column names to identify interactions
+             # We need to reconstruct DataFrame from scaled array
+             # The transformer stores original_feature_names to map correctly
+             X_scaled_df = pd.DataFrame(feature_scaled, columns=_cached_transformer.original_feature_names)
+             X_final_df = _cached_transformer.transform(X_scaled_df)
+             X_final = X_final_df.values
+        
         # Predict
-        prediction = _cached_model.predict(feature_scaled)[0]
-        prediction_proba = _cached_model.predict_proba(feature_scaled)[0]
+        prediction = _cached_model.predict(X_final)[0]
+        prediction_proba = _cached_model.predict_proba(X_final)[0]
         
         response = {
             "prediction": int(prediction),
@@ -132,11 +156,21 @@ def xai_analyze():
         if _cached_training_data is None:
             return jsonify({"error": "Model not trained yet. Call /train first."}), 400
         
+        # Determine correct training data for XAI
+        # If we have a transformer (Improved Model), we MUST use the transformed training data (which is in X_train_scaled)
+        # to ensure feature count matches the model and feature_names.
+        if _cached_transformer:
+             X_train_input = _cached_training_data['X_train_scaled']
+             X_test_input = _cached_training_data['X_test_scaled']
+        else:
+             X_train_input = _cached_training_data['X_train']
+             X_test_input = _cached_training_data['X_test']
+
         # Run XAI analysis
         explainer = XAIExplainer(
             model=_cached_training_data['best_model'],
-            X_train=_cached_training_data['X_train'],
-            X_test=_cached_training_data['X_test'],
+            X_train=X_train_input,
+            X_test=X_test_input,
             y_train=_cached_training_data['y_train'],
             y_test=_cached_training_data['y_test'],
             X_train_scaled=_cached_training_data['X_train_scaled'],
