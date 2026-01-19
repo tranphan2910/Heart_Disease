@@ -2588,9 +2588,9 @@ def show_prediction_page():
                                      format_func=lambda x: "No" if x == 0 else "Yes")
         
         with col3:
-            chest_pain = st.selectbox("Chest Pain Type", [0, 2, 3], help="0: Asymptomatic, 2: Atypical Angina, 3: Non-Anginal Pain")
-            resting_ecg = st.selectbox("Resting ECG", [0, 2], help="0: Normal, 2: LV Hypertrophy")
-            st_slope = st.selectbox("ST Slope", [1, 2], help="1: Flat, 2: Up")
+            chest_pain = st.selectbox("Chest Pain Type", [0, 1, 2, 3], format_func=lambda x: f"{x}: " + ["Asymptomatic", "Atypical Angina", "Non-Anginal Pain", "Typical Angina"][x] if x < 4 else f"{x}")
+            resting_ecg = st.selectbox("Resting ECG", [0, 1, 2], format_func=lambda x: f"{x}: " + ["Normal", "ST-T Wave Abnormality", "LV Hypertrophy"][x] if x < 3 else f"{x}")
+            st_slope = st.selectbox("ST Slope", [0, 1, 2], format_func=lambda x: f"{x}: " + ["Upsloping", "Flat", "Downsloping"][x] if x < 3 else f"{x}")
         
         submit = st.form_submit_button("🔮 Predict", type="primary", use_container_width=True)
         
