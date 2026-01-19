@@ -2585,7 +2585,7 @@ def show_prediction_page():
                                           format_func=lambda x: "No" if x == 0 else "Yes")
         
         with col3:
-            chest_pain = st.selectbox("Chest Pain Type", [0, 2, 3])
+            chest_pain = st.selectbox("Chest Pain Type", [0, 1,2, 3,4])
             resting_ecg = st.selectbox("Resting ECG", [0, 2])
             st_slope = st.selectbox("ST Slope", [1, 2])
         

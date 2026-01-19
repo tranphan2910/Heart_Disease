@@ -230,7 +230,7 @@ class DataProcessor:
                     self.weak_categorical_features.append(col)
                     print(f"    ❌ {col}: {sample_count} samples ({sample_percentage*100:.1f}%) < {sample_threshold*100}% → REMOVE")
                 else:
-                    print(f"    ✅ {col}: {sample_count} samples ({sample_percentage*100:.1f}%) → KEEP")
+                    print(f"    ✅ {col}: {sample_count} samples ({sample_percentage*100:.1f}%) >= {sample_threshold*100}% → KEEP")
         
         # 3. Always remove AgeBand if exists (derived feature)
         if 'AgeBand' in X.columns:

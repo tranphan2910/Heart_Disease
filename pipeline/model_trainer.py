@@ -262,6 +262,29 @@ class ModelTrainer:
         X_train, X_test, y_train, y_test, X_train_scaled, X_test_scaled = self.split_and_scale(X, y)
         print(f"  Train shape: {X_train.shape}, Test shape: {X_test.shape}")
         
+
+        # ====== PATIENT LOCATOR (TEST → ORIGINAL DATASET) ======
+        n_show = min(7, len(X_test))
+
+        patient_locator = pd.DataFrame({
+            "Patient (Test)": [f"P{str(i).zfill(2)}" for i in range(1, n_show + 1)],
+            "Dataset index": X_test.index[:n_show].to_list(),                 # index gốc (0-based)
+            "Excel row": (X_test.index[:n_show].to_numpy() + 2).astype(int)   # +2 vì header + 1-based
+        })
+
+        print("\n" + "=" * 54)
+        print("PATIENT LOCATOR (Test Set → Original Dataset)")
+        print("=" * 54)
+        print(patient_locator.to_string(index=False))
+        print("=" * 54 + "\n")
+        # =======================================================
+
+
+        # 2. Baseline training...
+        print("\n[2/3] Training baseline models...")
+        baseline_results = self.train_baseline_models(X_train_scaled, y_train, X_test_scaled, y_test)
+
+        
         # 2. Baseline training (optional - quick check)
         print("\n[2/3] Training baseline models...")
         baseline_results = self.train_baseline_models(X_train_scaled, y_train, X_test_scaled, y_test)
