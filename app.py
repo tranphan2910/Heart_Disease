@@ -284,10 +284,10 @@ def main():
         
         # Navigation with icons
         st.markdown("### <i class='bi bi-compass'></i> Navigation", unsafe_allow_html=True)
-        # Update page order as requested: Training 2nd, Prediction 3rd, XAI 4th, LLM 5th
+        # Update page order as requested: Training 2nd, Prediction 3rd, XAI 4th
         page = st.radio(
             "Select Page",
-            ["Home", "Data & Training", "Prediction", "XAI Analysis", "LLM Interpretation"],
+            ["Home", "Data & Training", "Prediction", "XAI Analysis"],
             label_visibility="collapsed"
         )
         
@@ -347,8 +347,6 @@ def main():
         show_prediction_page()
     elif page == "XAI Analysis":
         show_xai_page()
-    elif page == "LLM Interpretation":
-        show_llm_page()
 
 
 def show_home_page():
