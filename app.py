@@ -284,10 +284,10 @@ def main():
         
         # Navigation with icons
         st.markdown("### <i class='bi bi-compass'></i> Navigation", unsafe_allow_html=True)
-        # Update page order as requested: Training 2nd, Prediction 3rd
+        # Update page order as requested: Training 2nd, Prediction 3rd, XAI 4th, LLM 5th
         page = st.radio(
             "Select Page",
-            ["Home", "Data & Training","XAI Analysis", "Prediction"],
+            ["Home", "Data & Training", "Prediction", "XAI Analysis", "LLM Interpretation"],
             label_visibility="collapsed"
         )
         
@@ -2458,52 +2458,98 @@ def show_shap_analysis(xai_results):
 
 
 def show_permutation_analysis(xai_results):
-    """Display Permutation Importance results"""
-    st.subheader("Permutation Importance")
+    """Display Global Explanations (Permutation Importance & SHAP)"""
+    st.markdown("Measurement of global feature importance.")
     
-    st.markdown("""
+    # Create Tabs for different Global Views
+    tab_pi, tab_shap = st.tabs(["📊 Permutation Importance", "🐝 SHAP Summary"])
+    
+    # --- TAB 1: PERMUTATION IMPORTANCE ---
+    with tab_pi:
+        st.markdown("""
         **Permutation Importance** measures **performance drop** when a feature is shuffled.
         The larger the drop, the more important the feature.
-    """)
-    
-    perm_importance = xai_results['permutation_importance']
-    
-    # Visualization
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        top_10 = perm_importance.head(10)
+        """)
         
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            y=top_10['Feature'],
-            x=top_10['Importance'],
-            error_x=dict(type='data', array=top_10['Std']),
-            orientation='h',
-            marker=dict(color=top_10['Importance'], colorscale='blues')
-        ))
+        if 'permutation_importance' in xai_results:
+            perm_importance = xai_results['permutation_importance']
+            
+            # Visualization
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                top_10 = perm_importance.head(10)
+                
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    y=top_10['Feature'],
+                    x=top_10['Importance'],
+                    error_x=dict(type='data', array=top_10['Std']),
+                    orientation='h',
+                    marker=dict(color=top_10['Importance'], colorscale='blues')
+                ))
+                
+                fig.update_layout(
+                    title='Top 10 Features by Permutation Importance',
+                    xaxis_title='Importance',
+                    yaxis_title='Feature',
+                    height=500,
+                    yaxis={'categoryorder':'total ascending'}
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                st.markdown("### Top 5 Features")
+                for i, row in perm_importance.head(5).iterrows():
+                    st.metric(
+                        label=row['Feature'],
+                        value=f"{row['Importance']:.4f}",
+                        delta=f"±{row['Std']:.4f}"
+                    )
+            
+            # Comparison table
+            with st.expander("📋 View Full Ranking"):
+                st.dataframe(perm_importance, use_container_width=True)
+        else:
+            st.info("Permutation Importance data not available.")
+
+    # --- TAB 2: SHAP SUMMARY ---
+    with tab_shap:
+        st.markdown("""
+        **SHAP Summary** shows the impact of each feature on the model output.
+        - **Color**: Feature Value (Red = High, Blue = Low)
+        - **X-axis**: Impact on prediction (Right = Positive impact/Disease, Left = Negative/No Disease)
+        """)
         
-        fig.update_layout(
-            title='Top 10 Features by Permutation Importance',
-            xaxis_title='Importance',
-            yaxis_title='Feature',
-            height=500,
-            yaxis={'categoryorder':'total ascending'}
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.markdown("###Top 5 Features")
-        for i, row in perm_importance.head(5).iterrows():
-            st.metric(
-                label=row['Feature'],
-                value=f"{row['Importance']:.4f}",
-                delta=f"±{row['Std']:.4f}"
-            )
-    
-    # Comparison table
-    with st.expander("📋 View Full Ranking"):
-        st.dataframe(perm_importance, use_container_width=True)
+        if 'shap_values' in xai_results and 'shap_data' in xai_results:
+            try:
+                shap_values = xai_results['shap_values']
+                X_shap = xai_results['shap_data']
+                
+                # Handle SHAP values structure (List for classifiers vs Array)
+                if isinstance(shap_values, list):
+                    # For binary classification, typically use index 1 (Positive Class)
+                    shap_val_display = shap_values[1]
+                else:
+                    shap_val_display = shap_values
+
+                # Plot
+                fig_shap, ax = plt.subplots()
+                shap.summary_plot(shap_val_display, X_shap, show=False, plot_type="dot")
+                st.pyplot(fig_shap)
+                plt.close(fig_shap)
+                
+                # Optional: Bar plot
+                with st.expander("View SHAP Bar Plot"):
+                    fig_bar, ax_bar = plt.subplots()
+                    shap.summary_plot(shap_val_display, X_shap, show=False, plot_type="bar")
+                    st.pyplot(fig_bar)
+                    plt.close(fig_bar)
+
+            except Exception as e:
+                st.error(f"Error plotting SHAP: {str(e)}")
+        else:
+            st.info("SHAP data not available in results.")
 
 
 
@@ -2731,13 +2777,13 @@ def explain_custom_instance(df_input_raw):
             st.metric("Confidence", f"{prob[pred]*100:.1f}%")
   
             
-        # # --- GLOBAL EXPLANATION ---
-        # st.divider()
-        # st.markdown("### 1. Global Context (General Model Behavior)")
-        # if st.session_state.xai_results:
-        #      show_permutation_analysis(st.session_state.xai_results)
-        # else:
-        #      st.warning("Global XAI unavailable.")
+        # --- GLOBAL EXPLANATION ---
+        st.divider()
+        st.markdown("### 1. Global Context (General Model Behavior)")
+        if st.session_state.xai_results:
+             show_permutation_analysis(st.session_state.xai_results)
+        else:
+             st.warning("Global XAI unavailable.")
 
         # --- LOCAL EXPLANATION (LIME) ---
         st.divider()
@@ -3099,11 +3145,27 @@ def show_manual_input():
             resting_ecg = st.selectbox("Resting ECG", [0, 1, 2], format_func=lambda x: f"{x}: " + ["Normal", "ST-T Wave Abnormality", "LV Hypertrophy"][x] if x < 3 else f"{x}")
             st_slope = st.selectbox("ST Slope", [0, 1, 2], format_func=lambda x: f"{x}: " + ["Upsloping", "Flat", "Downsloping"][x] if x < 3 else f"{x}")
         
-        submit = st.form_submit_button("🔮 Predict", type="primary", use_container_width=True)
+        submit = st.form_submit_button("🔮 Predict & Explain", type="primary", use_container_width=True)
         
         if submit:
-            make_prediction(age, sex, resting_bp, max_hr, oldpeak, exercise_angina,
-                          chest_pain, resting_ecg, st_slope, cholesterol, fasting_bs)
+            # Construct DataFrame with correct column names matching training data
+            input_data = {
+                'age': [age],
+                'sex': [sex],
+                'chest pain type': [chest_pain],
+                'resting bp s': [resting_bp],
+                'cholesterol': [cholesterol],
+                'fasting blood sugar': [fasting_bs],
+                'resting ecg': [resting_ecg],
+                'max heart rate': [max_hr],
+                'exercise angina': [exercise_angina],
+                'oldpeak': [oldpeak],
+                'ST slope': [st_slope]
+            }
+            df_input = pd.DataFrame(input_data)
+            
+            # Use the full explanation pipeline
+            explain_custom_instance(df_input)
 
 
 def make_prediction(age, sex, resting_bp, max_hr, oldpeak, exercise_angina,
