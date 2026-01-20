@@ -3107,142 +3107,27 @@ def show_manual_input():
             resting_ecg = st.selectbox("Resting ECG", [0, 1, 2], format_func=lambda x: f"{x}: " + ["Normal", "ST-T Wave Abnormality", "LV Hypertrophy"][x] if x < 3 else f"{x}")
             st_slope = st.selectbox("ST Slope", [0, 1, 2], format_func=lambda x: f"{x}: " + ["Upsloping", "Flat", "Downsloping"][x] if x < 3 else f"{x}")
         
-        submit = st.form_submit_button("🔮 Predict", type="primary", use_container_width=True)
+        submit = st.form_submit_button("🔮 Predict & Explain", type="primary", use_container_width=True)
         
         if submit:
-            make_prediction(age, sex, resting_bp, max_hr, oldpeak, exercise_angina,
-                          chest_pain, resting_ecg, st_slope, cholesterol, fasting_bs)
-
-
-def make_prediction(age, sex, resting_bp, max_hr, oldpeak, exercise_angina,
-                    chest_pain, resting_ecg, st_slope, cholesterol, fasting_bs):
-    """Make prediction for new instance using the trained model"""
-    from sklearn.preprocessing import StandardScaler
-    
-    try:
-        results_all = st.session_state.training_results
-        
-        # 1. Get appropriate results and model
-        if 'fe_xai' in results_all and results_all['fe_xai']:
-            active_results = results_all['fe_xai']
-        elif 'fe_only' in results_all and results_all['fe_only']:
-            active_results = results_all['fe_only']
-        elif 'no_fe' in results_all and results_all['no_fe']:
-             active_results = results_all['no_fe']
-        else:
-             st.error("Model data not found. Please train model first.")
-             return
-             
-        model = active_results['best_model']
-            
-        # 2. Prepare raw input data
-        # Mapping column names to match DataProcessor logic
-        input_data = {
-            'age': [age],
-            'sex': [sex],
-            'resting bp s': [resting_bp],
-            'cholesterol': [cholesterol],
-            'fasting blood sugar': [fasting_bs],
-            'max heart rate': [max_hr],
-            'exercise angina': [exercise_angina],
-            'oldpeak': [oldpeak],
-            'chest pain type': [chest_pain],
-            'resting ecg': [resting_ecg],
-            'ST slope': [st_slope]
-        }
-        df_input = pd.DataFrame(input_data)
-        
-        # 3. Apply transformations (must match training pipeline)
-        if cholesterol > 0:
-            df_input['cholesterol'] = np.log1p(df_input['cholesterol'])
-        if oldpeak >= 0:
-            df_input['oldpeak'] = np.log1p(df_input['oldpeak'])
-            
-        # 4. Feature Engineering (One-Hot Encoding)
-        one_hot_cols = ['chest pain type', 'resting ecg', 'ST slope']
-        df_encoded = pd.get_dummies(df_input, columns=one_hot_cols, dtype=int)
-        
-        # 5. Align with training features
-        train_columns = active_results['X_train'].columns.tolist()
-        
-        # Add missing columns (fill with 0)
-        for col in train_columns:
-            if col not in df_encoded.columns:
-                df_encoded[col] = 0
-                
-        # Select and reorder to match training data exactly
-        df_encoded = df_encoded[train_columns]
-        
-        # 6. Scaling
-        # Fit a new scaler on the original training data to ensure consistent scaling
-        scaler = StandardScaler()
-        scaler.fit(active_results['X_train'])
-        
-        X_new_scaled = scaler.transform(df_encoded)
-        
-        # 7. Apply Interactions if needed (for XAI-improved models)
-        if active_results.get('improved_selected', False) and 'new_features' in active_results:
-            # We need to work with DataFrame to easily select interaction columns
-            X_scaled_df = pd.DataFrame(X_new_scaled, columns=train_columns)
-            
-            for feature in active_results['new_features']:
-                # Feature name is like "col1_x_col2"
-                parts = feature.split('_x_')
-                if len(parts) == 2:
-                    f1, f2 = parts
-                    if f1 in X_scaled_df.columns and f2 in X_scaled_df.columns:
-                        X_scaled_df[feature] = X_scaled_df[f1] * X_scaled_df[f2]
-            
-            # Convert back to numpy array for prediction
-            X_final = X_scaled_df.values
-        else:
-            X_final = X_new_scaled
-        
-        # 8. Prediction
-        prediction = model.predict(X_final)[0]
-        prediction_proba = model.predict_proba(X_final)[0]
-        
-        demo_pred = prediction
-        demo_proba = prediction_proba
-        
-        st.divider()
-        st.subheader("Prediction Result")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if demo_pred == 1:
-                st.markdown("<div style='padding: 1rem; border-radius: 0.5rem; background-color: #f8d7da; border-left: 4px solid #721c24; color: #721c24;'><i class='bi bi-exclamation-triangle-fill' style='color: #F39C12;'></i> **High Risk of Heart Disease**</div>", unsafe_allow_html=True)
-            else:
-                st.markdown("<div style='padding: 1rem; border-radius: 0.5rem; background-color: #d4edda; border-left: 4px solid #155724; color: #155724;'><i class='bi bi-check-circle-fill' style='color: #27AE60;'></i> **Low Risk of Heart Disease**</div>", unsafe_allow_html=True)
-        
-        with col2:
-            st.metric("Confidence", f"{max(demo_proba)*100:.1f}%")
-        
-        # Probability gauge
-        fig = go.Figure(go.Indicator(
-            mode = "gauge+number",
-            value = demo_proba[1] * 100,
-            title = {'text': "Disease Probability"},
-            gauge = {
-                'axis': {'range': [None, 100]},
-                'bar': {'color': "darkred"},
-                'steps': [
-                    {'range': [0, 30], 'color': "lightgreen"},
-                    {'range': [30, 70], 'color': "yellow"},
-                    {'range': [70, 100], 'color': "red"}
-                ],
-                'threshold': {
-                    'line': {'color': "red", 'width': 4},
-                    'thickness': 0.75,
-                    'value': 50
-                }
+            # Construct DataFrame with correct column names matching training data
+            input_data = {
+                'age': [age],
+                'sex': [sex],
+                'chest pain type': [chest_pain],
+                'resting bp s': [resting_bp],
+                'cholesterol': [cholesterol],
+                'fasting blood sugar': [fasting_bs],
+                'resting ecg': [resting_ecg],
+                'max heart rate': [max_hr],
+                'exercise angina': [exercise_angina],
+                'oldpeak': [oldpeak],
+                'ST slope': [st_slope]
             }
-        ))
-        st.plotly_chart(fig, use_container_width=True)
-        
-    except Exception as e:
-        st.error(f"Prediction failed: {str(e)}")
+            df_input = pd.DataFrame(input_data)
+            
+            # Use the full explanation pipeline
+            explain_custom_instance(df_input)
 
 
 if __name__ == "__main__":
