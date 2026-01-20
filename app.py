@@ -3143,7 +3143,7 @@ def show_manual_input():
         with col3:
             chest_pain = st.selectbox("Chest Pain Type", [0, 1, 2, 3], format_func=lambda x: f"{x}: " + ["Asymptomatic", "Atypical Angina", "Non-Anginal Pain", "Typical Angina"][x] if x < 4 else f"{x}")
             resting_ecg = st.selectbox("Resting ECG", [0, 1, 2], format_func=lambda x: f"{x}: " + ["Normal", "ST-T Wave Abnormality", "LV Hypertrophy"][x] if x < 3 else f"{x}")
-            st_slope = st.selectbox("ST Slope", [0, 1, 2], format_func=lambda x: f"{x}: " + ["Upsloping", "Flat", "Downsloping"][x] if x < 3 else f"{x}")
+            st_slope = st.selectbox("ST Slope", [1, 2], format_func=lambda x: f"{x}: " + ["Upsloping", "Flat", "Downsloping"][x] if x < 3 else f"{x}")
         
         submit = st.form_submit_button("🔮 Predict & Explain", type="primary", use_container_width=True)
         
