@@ -3181,6 +3181,9 @@ def show_manual_input():
             chest_pain = st.selectbox("Chest Pain Type", [0, 1, 2, 3], format_func=lambda x: f"{x}: " + ["Asymptomatic", "Atypical Angina", "Non-Anginal Pain", "Typical Angina"][x] if x < 4 else f"{x}")
             resting_ecg = st.selectbox("Resting ECG", [0, 1, 2], format_func=lambda x: f"{x}: " + ["Normal", "ST-T Wave Abnormality", "LV Hypertrophy"][x] if x < 3 else f"{x}")
             st_slope = st.selectbox("ST Slope", [1, 2], format_func=lambda x: f"{x}: " + ["Upsloping", "Flat", "Downsloping"][x] if x < 3 else f"{x}")
+            
+            # Optional: Input actual label if known (for testing purposes)
+            actual_input = st.selectbox("Actual Label (Optional)", ["Unknown", "Normal", "Heart Disease"])
         
         submit = st.form_submit_button("🔮 Predict & Explain", type="primary", use_container_width=True)
         
@@ -3201,8 +3204,13 @@ def show_manual_input():
             }
             df_input = pd.DataFrame(input_data)
             
+            # Handle Actual Label
+            target_label = None
+            if actual_input != "Unknown":
+                target_label = actual_input
+            
             # Use the full explanation pipeline
-            explain_custom_instance(df_input)
+            explain_custom_instance(df_input, actual_label=target_label)
 
 
 def make_prediction(age, sex, resting_bp, max_hr, oldpeak, exercise_angina,
