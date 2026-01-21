@@ -2994,7 +2994,15 @@ def explain_test_instance(idx, active_results):
             
             # Display Prediction
             st.divider()
-            col1, col2 = st.columns(2)
+            
+            # Get actual label
+            y_test = active_results.get('y_test')
+            actual_label = None
+            if y_test is not None:
+                actual_val = y_test.iloc[idx]
+                actual_label = "Heart Disease" if actual_val == 1 else "Normal"
+            
+            col1, col2, col3 = st.columns(3)
             with col1:
                 st.markdown("### Prediction Result")
             if pred == 1:
@@ -3012,6 +3020,15 @@ def explain_test_instance(idx, active_results):
                 st.markdown("### Confidence")
                 st.progress(float(prob[pred]))
                 st.caption(f"{prob[pred]*100:.2f}% probability")
+                
+            with col3:
+                st.markdown("### Actual Label")
+                if actual_label == "Heart Disease":
+                     st.markdown(f"<h2 style='color: #721c24;'>{actual_label}</h2>", unsafe_allow_html=True)
+                elif actual_label == "Normal":
+                     st.markdown(f"<h2 style='color: #155724;'>{actual_label}</h2>", unsafe_allow_html=True)
+                else:
+                     st.markdown(f"<h2>Unknown</h2>", unsafe_allow_html=True)
 
             # 2. Global Explanations (Reuse from XAI Results)
             st.divider()
