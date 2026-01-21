@@ -2700,10 +2700,10 @@ def show_demo_scenarios():
         # 2. Add 'target' mock for compatibility if needed (not needed for prediction)
         
         # 3. Use the common pipeline
-        explain_custom_instance(df_input)
+        explain_custom_instance(df_input, actual_label=case_data['target_label'])
 
 
-def explain_custom_instance(df_input_raw):
+def explain_custom_instance(df_input_raw, actual_label=None):
     """
     Run pipeline for a custom dataframe input (Demo or Manual)
     This handles: Preprocessing -> Prediction -> Global XAI -> Local LIME -> LLM
@@ -2767,12 +2767,17 @@ def explain_custom_instance(df_input_raw):
         
         st.divider()
             # Display prediction info
-        col1, col2= st.columns(2)
+        col1, col2, col3 = st.columns(3)
         
         with col1:
             st.metric("Prediction", "High Risk" if pred == 1 else "Low Risk")
         with col2:
             st.metric("Confidence", f"{prob[pred]*100:.1f}%")
+        with col3:
+            if actual_label:
+                st.metric("Actual Label", actual_label)
+            else:
+                st.metric("Actual Label", "Unknown")
   
             
         # --- GLOBAL EXPLANATION ---
