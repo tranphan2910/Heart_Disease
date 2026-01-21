@@ -2770,14 +2770,31 @@ def explain_custom_instance(df_input_raw, actual_label=None):
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric("Prediction", "High Risk" if pred == 1 else "Low Risk")
-        with col2:
-            st.metric("Confidence", f"{prob[pred]*100:.1f}%")
-        with col3:
-            if actual_label:
-                st.metric("Actual Label", actual_label)
+            st.markdown("### Prediction Result")
+            if pred == 1:
+                st.markdown(
+                    "<div style='font-size: 24px; font-weight: 800; line-height: 1.2; color: #721c24;'>🚨 High Risk</div>",
+                    unsafe_allow_html=True
+                )
             else:
-                st.metric("Actual Label", "Unknown")
+                st.markdown(
+                    "<div style='font-size: 24px; font-weight: 800; line-height: 1.2; color: #155724;'>✅ Low Risk</div>",
+                    unsafe_allow_html=True
+                )
+
+        with col2:
+            st.markdown("### Confidence")
+            st.progress(float(prob[pred]))
+            st.caption(f"{prob[pred]*100:.2f}% probability")
+
+        with col3:
+            st.markdown("### Actual Label")
+            if actual_label == "Heart Disease":
+                 st.markdown(f"<h2 style='color: #721c24;'>{actual_label}</h2>", unsafe_allow_html=True)
+            elif actual_label == "Normal":
+                 st.markdown(f"<h2 style='color: #155724;'>{actual_label}</h2>", unsafe_allow_html=True)
+            else:
+                 st.markdown(f"<h2 style='color: gray;'>Unknown</h2>", unsafe_allow_html=True)
   
             
         # --- GLOBAL EXPLANATION ---
