@@ -3215,7 +3215,41 @@ def show_manual_input():
             if actual_input != "Unknown":
                 target_label = actual_input
             elif actual_input == "Unknown":
-                target_label = "Unknown"
+                # Check if this input matches any known DEMO case
+                import numpy as np
+                matched_case = None
+                
+                # Compare current input_data with each DEMO_CASES entry
+                for name, case in DEMO_CASES.items():
+                    is_match = True
+                    for key, val in input_data.items():
+                        # Key must exist in case
+                        if key not in case: 
+                            continue # Or False? Features should match. Let's assume subsets are okay or keys match.
+                        
+                        # Compare value (scalars vs list[0])
+                        user_val = val[0]
+                        case_val = case[key]
+                        
+                        # Rough float comparison for numbers, direct for ints
+                        if isinstance(user_val, float) or isinstance(case_val, float):
+                             if not np.isclose(user_val, case_val, atol=0.01):
+                                 is_match = False
+                                 break
+                        else:
+                             if user_val != case_val:
+                                 is_match = False
+                                 break
+                    
+                    if is_match:
+                        matched_case = name
+                        target_label = case['target_label']
+                        break
+                
+                if matched_case:
+                     st.toast(f"ℹ️ Matched known patient record: {matched_case}")
+                else:
+                     target_label = "Unknown"
             
             # Use the full explanation pipeline
             explain_custom_instance(df_input, actual_label=target_label)
