@@ -3017,7 +3017,13 @@ def explain_test_instance(idx, active_results):
             actual_label = None
             if y_test is not None:
                 actual_val = y_test.iloc[idx]
-                actual_label = "Heart Disease" if actual_val == 1 else "Normal"
+                # Robust check for 1/0, string or numeric
+                try:
+                    is_disease = int(actual_val) == 1
+                except:
+                    is_disease = str(actual_val) == '1'
+                
+                actual_label = "Heart Disease" if is_disease else "Normal"
             
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -3045,7 +3051,7 @@ def explain_test_instance(idx, active_results):
                 elif actual_label == "Normal":
                      st.markdown(f"<h2 style='color: #155724;'>{actual_label}</h2>", unsafe_allow_html=True)
                 else:
-                     st.markdown(f"<h2>Unknown</h2>", unsafe_allow_html=True)
+                     st.markdown(f"<h2 style='color: gray;'>Unknown</h2>", unsafe_allow_html=True)
 
             # 2. Global Explanations (Reuse from XAI Results)
             st.divider()
@@ -3208,6 +3214,8 @@ def show_manual_input():
             target_label = None
             if actual_input != "Unknown":
                 target_label = actual_input
+            elif actual_input == "Unknown":
+                target_label = "Unknown"
             
             # Use the full explanation pipeline
             explain_custom_instance(df_input, actual_label=target_label)
