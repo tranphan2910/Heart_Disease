@@ -3005,16 +3005,16 @@ def explain_test_instance(idx, active_results):
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.markdown("### Prediction Result")
-            if pred == 1:
-                st.markdown(
-                    "<div style='font-size: 60px; font-weight: 800; line-height: 1.2;'>🚨 High Risk</div>",
-                    unsafe_allow_html=True
-                )
-            else:
-                st.markdown(
-                    "<div style='font-size: 0px; font-weight: 800; line-height: 1.2;'>✅ Low Risk</div>",
-                    unsafe_allow_html=True
-                )
+                if pred == 1:
+                    st.markdown(
+                        "<div style='font-size: 24px; font-weight: 800; line-height: 1.2; color: #721c24;'>🚨 High Risk</div>",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        "<div style='font-size: 24px; font-weight: 800; line-height: 1.2; color: #155724;'>✅ Low Risk</div>",
+                        unsafe_allow_html=True
+                    )
 
             with col2:
                 st.markdown("### Confidence")
